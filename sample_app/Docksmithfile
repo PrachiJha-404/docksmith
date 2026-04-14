@@ -1,0 +1,6 @@
+FROM ubuntu:latest
+ENV GREETING=World
+WORKDIR /app
+COPY . /app
+RUN echo "Hello ${GREETING}"
+CMD ["python", "main.py"]
