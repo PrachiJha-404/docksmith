@@ -38,6 +38,7 @@ def parse_docksmithfile(path: str) -> list[Instruction]:
                 if not arg_str:
                     raise ParseError(f"Line {line_num}: FROM requires an image")
                 args = {"image": arg_str}
+                
             elif inst_type == "COPY":
                 # Expecting format: COPY <src> <dest>
                 if not arg_str:
@@ -47,14 +48,17 @@ def parse_docksmithfile(path: str) -> list[Instruction]:
                     args = {"src": src, "dest": dest}
                 except ValueError:
                     raise ParseError(f"Line {line_num}: COPY requires <src> and <dest>")
+            
             elif inst_type == "RUN":
                 if not arg_str:
                     raise ParseError(f"Line {line_num}: RUN requires a command")
                 args = {"cmd": arg_str}
+            
             elif inst_type == "WORKDIR":
                 if not arg_str:
                     raise ParseError(f"Line {line_num}: WORKDIR requires a path")
                 args = {"path": arg_str}
+            
             elif inst_type == "ENV":
                 # Expecting format: ENV KEY=value
                 if "=" in arg_str:
@@ -62,6 +66,7 @@ def parse_docksmithfile(path: str) -> list[Instruction]:
                     args = {"key": k.strip(), "value": v.strip()}
                 else:
                     raise ParseError(f"Line {line_num}: Invalid ENV format, expected KEY=value")
+            
             elif inst_type == "CMD":
                 try:
                     cmd_arr = json.loads(arg_str)
