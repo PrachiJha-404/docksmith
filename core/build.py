@@ -141,6 +141,8 @@ def run_build(instructions, context: str, tag: str, no_cache: bool = False) -> i
                 layer_digests = [layer["digest"] for layer in base_image["layers"]]
                 extract_layers(layer_digests, rootfs)
 
+                layers.extend(base_image.get("layers", []))
+                
                 # Set base config
                 env_map = {}
                 for e in base_image["config"].get("Env", []):
