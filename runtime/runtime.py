@@ -281,6 +281,14 @@ def make_base_rootfs(root: str) -> None:
     usr_bin = root / "usr" / "bin"
     usr_bin.mkdir(parents=True, exist_ok=True)
 
+    usr_cat = usr_bin / "cat"
+    if not usr_cat.exists():
+        os.symlink("../../bin/cat", usr_cat)  
+        
+    usr_sh = usr_bin / "sh"
+    if not usr_sh.exists():
+        os.symlink("../../bin/sh", usr_sh)
+        
     # link /usr/bin/cat → /bin/cat
     usr_cat = usr_bin / "cat"
     if not usr_cat.exists():
