@@ -114,3 +114,4 @@ def resolve_cache(
     if d:
         return CacheDecision(True, d)
     return CacheDecision(False, None)
+# Determines CACHE HIT / MISS based on deterministic inputs.
