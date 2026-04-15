@@ -27,7 +27,7 @@ def main():
     manifest = {
         "name": "base",
         "tag": "latest",
-        "digest": "",  # optional for now
+        "digest": layer_meta["digest"],  # Set to the base layer digest
         "config": {
             "Env": [],
             "Cmd": [],

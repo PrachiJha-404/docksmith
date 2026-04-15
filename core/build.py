@@ -91,6 +91,8 @@ def run_build(instructions, context: str, tag: str, no_cache: bool = False) -> i
                 copy_hashes,
             )
 
+            # print(f"Cache key for {instr.type}: {key}")
+
             if not no_cache:
                 decision = resolve_cache(key)
                 if decision.hit:
@@ -140,6 +142,7 @@ def run_build(instructions, context: str, tag: str, no_cache: bool = False) -> i
                 # Extract base layers
                 layer_digests = [layer["digest"] for layer in base_image["layers"]]
                 extract_layers(layer_digests, rootfs)
+                layers.extend(base_image.get("layers", []))
 
                 # Set base config
                 env_map = {}
@@ -185,6 +188,7 @@ def run_build(instructions, context: str, tag: str, no_cache: bool = False) -> i
             # ---- STORE CACHE ----
             if not no_cache:
                 store_cache(key, meta["digest"])
+                # print(f"Stored cache: {key} -> {meta['digest']}")
 
             shutil.rmtree(prev_snapshot, ignore_errors=True)
 

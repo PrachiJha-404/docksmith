@@ -34,8 +34,8 @@ def layer_exists(digest: str) -> bool:
     # digest format: sha256:<hash>
     if not digest or ":" not in digest:
         return False
-    fname = digest.split(":", 1)[1]
-    path = os.path.join(LAYERS_DIR, fname)
+    # fname = digest.split(":", 1)[1]
+    path = os.path.join(LAYERS_DIR, digest)
     return os.path.exists(path)
 
 
