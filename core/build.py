@@ -166,7 +166,7 @@ def run_build(instructions, context: str, tag: str, no_cache: bool = False) -> i
             elif instr.type == "RUN":
                 rc = run_in_container(
                     root_fs_path=rootfs,
-                    cmd_list=["/bin/sh", "-c", instr.args["cmd"]],
+                    cmd_list=[instr.args["cmd"]],
                     env_map=env_map,
                     workdir=workdir,
                 )
