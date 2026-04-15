@@ -1,0 +1,4 @@
+FROM base:latest
+WORKDIR /app
+RUN echo hello > test.txt
+CMD ["cat", "test.txt"]

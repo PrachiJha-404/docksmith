@@ -76,7 +76,7 @@ def _handle_build(cmd: BuildCommand) -> int:
     # Example stub — replace with real import once Person 2/3 are ready:
     # -----------------------------------------------------------------------
     try:
-        from core.build_engine import run_build   # Person 2/3 implement this
+        from core.build import run_build  # Person 2/3 implement this
         return run_build(
             instructions=instructions,
             context=cmd.context,
@@ -92,19 +92,33 @@ def _handle_build(cmd: BuildCommand) -> int:
 
 
 def _handle_run(cmd: RunCommand) -> int:
-    """
-    docksmith run [-e KEY=VALUE ...] <name:tag> [cmd ...]
-    """
-    try:
-        from runtime.runtime import run_container   # Person 4 implements this
-        return run_container(
-            tag=cmd.tag,
-            cmd_override=cmd.cmd if cmd.cmd else None,
-            env_overrides=cmd.env_overrides,
-        )
-    except ImportError:
-        print(f"[stub] Would run {cmd.tag}  cmd_override={cmd.cmd}  env={cmd.env_overrides}")
-        return 0
+    from runtime.runtime import run_container, Image
+    import json
+    from pathlib import Path
+
+    name = cmd.name
+    tag_value = cmd.tag_value
+
+    image_path = Path.home() / ".docksmith" / "images" / f"{name}_{tag_value}.json"
+
+    if not image_path.exists():
+        print(f"Error: image {cmd.tag} not found", file=sys.stderr)
+        return 1
+
+    # Load image
+    image = Image.load(str(image_path))
+
+    # Convert env overrides list → dict
+    env_map = {}
+    for kv in cmd.env_overrides:
+        k, v = kv.split("=", 1)
+        env_map[k] = v
+
+    return run_container(
+        image=image,
+        cmd_override=cmd.cmd if cmd.cmd else None,
+        extra_env=env_map,
+    )
 
 
 def _handle_images(cmd: ImagesCommand) -> int:

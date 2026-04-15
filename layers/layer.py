@@ -67,7 +67,10 @@ def create_deterministic_tar(base: Path, file_list: List[str]) -> bytes:
             tarinfo.gid = 0
             tarinfo.uname = ""
             tarinfo.gname = ""
-            tarinfo.mode = 0o644
+            if os.access(full_path, os.X_OK):
+                tarinfo.mode = 0o755
+            else:
+                tarinfo.mode = 0o644
 
             with open(full_path, "rb") as f:
                 tar.addfile(tarinfo, f)

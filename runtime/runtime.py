@@ -151,7 +151,8 @@ def run_in_container(
             if stderr_fd is not None:
                 os.dup2(stderr_fd, 2)
 
-            os.execve(cmd_list[0], cmd_list, final_env) # replace the child process with the command
+            cmd_str = " ".join(cmd_list)
+            os.execvpe("/bin/sh", ["/bin/sh", "-c", cmd_str], final_env) # replace the child process with the command
         except Exception as exc:
             print(f"[docksmith] exec failed: {exc}", file=sys.stderr)
             os._exit(127)
@@ -195,34 +196,37 @@ def _safe_extract_member(member: tarfile.TarInfo, dest_root: str) -> str | None:
 
 def _extract_layers(layers: list[dict], dest: str) -> None:
     for layer in layers:
-        _, hex_hash = layer["digest"].split(":", 1)
-        tar_path = LAYERS_DIR / f"{hex_hash}.tar"
+        # Correct: use full digest as filename
+        tar_path = LAYERS_DIR / layer["digest"]
+
         if not tar_path.exists():
             raise FileNotFoundError(f"Layer tar not found: {tar_path}")
 
         with tarfile.open(tar_path, "r") as tf:
             real_root = os.path.realpath(dest)
+
             for m in tf.getmembers():
                 host_path = _safe_extract_member(m, dest)
+
                 if host_path is None:
                     print(
                         f"[docksmith] WARNING: skipping unsafe tar entry: {m.name!r}",
                         file=sys.stderr,
                     )
                     continue
+
                 m.name = os.path.relpath(host_path, dest)
-                # Extract one member at a time and re-check via realpath after
-                # the write, so a symlink deposited earlier in this same archive
-                # cannot redirect a later entry outside dest (TOCTOU fix).
+
+                # Extract safely
                 tf.extract(m, dest)
+
+                # Re-check for symlink escape
                 resolved = os.path.realpath(os.path.join(dest, m.name))
                 if not resolved.startswith(real_root + os.sep) and resolved != real_root:
                     os.remove(resolved)
                     raise RuntimeError(
                         f"[docksmith] symlink escape detected for entry {m.name!r}"
                     )
-
-
 # runtime entry point 
 def run_container(
     image: Image, # object containing layers,config etc
@@ -240,7 +244,7 @@ def run_container(
         return 1
     
     env = {**image.env_map, **(extra_env or {})}   # merge env dicts, extra_env overrides image env
-
+    env.setdefault("PATH", "/bin:/usr/bin")
     tmp_root = tempfile.mkdtemp(prefix="docksmith_run_") # create temp dir
     try:
         _extract_layers(image.layers, tmp_root)
@@ -254,6 +258,36 @@ def run_container(
     finally:
         shutil.rmtree(tmp_root, ignore_errors=True)   # clean up
 
+import shutil
+
+def make_base_rootfs(root: str) -> None:
+    root = Path(root)
+    (root / "bin").mkdir(parents=True, exist_ok=True)
+    (root / "tmp").mkdir(exist_ok=True)
+
+    # Copy static busybox
+    busybox = shutil.which("busybox")
+    if not busybox:
+        raise RuntimeError("busybox not found")
+
+    dest = root / "bin" / "busybox"
+    shutil.copy2(busybox, dest)
+
+    # Create symlinks for commands
+    for cmd in ["sh", "cat", "touch"]:
+        link = root / "bin" / cmd
+        if not link.exists():
+            os.symlink("busybox", link)
+    usr_bin = root / "usr" / "bin"
+    usr_bin.mkdir(parents=True, exist_ok=True)
+
+    # link /usr/bin/cat → /bin/cat
+    usr_cat = usr_bin / "cat"
+    if not usr_cat.exists():
+        os.symlink("/bin/cat", usr_cat)
+    usr_sh = usr_bin / "sh"
+    if not usr_sh.exists():
+        os.symlink("/bin/sh", usr_sh)
 
 if __name__ == "__main__":
     print("=== Docksmith Container Runtime ===\n")
